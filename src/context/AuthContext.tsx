@@ -148,24 +148,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Check if credentials match demo credentials or if Supabase is placeholder
     const isPlaceholder = import.meta.env.VITE_SUPABASE_URL?.includes('placeholder')
     
-    // Check demo credentials directly
-    if (isPlaceholder || password === 'password123') {
-      if (email === 'owner@smartpos.com') {
-        enableDemoMode('owner')
-        return { error: null }
-      }
-      if (email === 'cashier@smartpos.com') {
-        enableDemoMode('cashier')
-        return { error: null }
-      }
-      if (email === 'gudang@smartpos.com') {
-        enableDemoMode('staff_gudang')
-        return { error: null }
-      }
-    }
-
+    // Check demo credentials ONLY if Supabase is a placeholder (unconfigured)
     if (isPlaceholder) {
-      return { error: new Error('Supabase is not configured. Use demo credentials (owner@smartpos.com / cashier@smartpos.com / gudang@smartpos.com with password123).') }
+      if (password === 'password123') {
+        if (email === 'owner@smartpos.com') {
+          enableDemoMode('owner')
+          return { error: null }
+        }
+        if (email === 'cashier@smartpos.com') {
+          enableDemoMode('cashier')
+          return { error: null }
+        }
+        if (email === 'gudang@smartpos.com') {
+          enableDemoMode('staff_gudang')
+          return { error: null }
+        }
+      }
+      return { 
+        error: new Error('Supabase is not configured. Use the quick demo buttons or seeded demo credentials (owner@smartpos.com, cashier@smartpos.com, or gudang@smartpos.com with password password123).') 
+      }
     }
 
     setLoading(true)
