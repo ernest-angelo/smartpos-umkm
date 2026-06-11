@@ -84,12 +84,20 @@ ALTER TABLE public.transaction_items ENABLE ROW LEVEL SECURITY;
 -- 5. Helper Function to Get Current User's Role
 CREATE OR REPLACE FUNCTION public.get_my_role()
 RETURNS public.user_role AS $$
+DECLARE
+  v_role public.user_role;
 BEGIN
-  RETURN (
-    SELECT role FROM public.profiles WHERE id = auth.uid()
-  );
+  -- Try to get role from JWT metadata to avoid database query & recursion
+  v_role := (auth.jwt() -> 'user_metadata' ->> 'role')::public.user_role;
+  IF v_role IS NOT NULL THEN
+    RETURN v_role;
+  END IF;
+
+  -- Fallback to database query if JWT is not present (e.g. database-triggered scripts)
+  SELECT role INTO v_role FROM public.profiles WHERE id = auth.uid();
+  RETURN COALESCE(v_role, 'cashier'::public.user_role);
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path = public;
 
 -- 6. RLS Policies
 

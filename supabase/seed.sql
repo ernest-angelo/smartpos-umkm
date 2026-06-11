@@ -7,77 +7,120 @@ TRUNCATE public.transactions CASCADE;
 TRUNCATE public.stock_logs CASCADE;
 TRUNCATE public.products CASCADE;
 TRUNCATE public.categories CASCADE;
-DELETE FROM public.profiles;
-DELETE FROM auth.users WHERE id IN (
+-- Clean existing mock profiles
+DELETE FROM public.profiles WHERE id IN (
   '00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-000000000002',
   '00000000-0000-0000-0000-000000000003'
 );
 
 -- 1. Seed Mock Users in auth.users (triggers will sync to public.profiles)
--- Note: In local Supabase, passwords are encrypted. 'password123' is:
--- '$2a$10$tZptz5vj.g3mDR0LqP56x.9b7n9Uf63nC5rZ8QvS2s6Y8/0iH1U8y'
-INSERT INTO auth.users (
-  id,
-  instance_id,
-  email,
-  encrypted_password,
-  email_confirmed_at,
-  raw_app_meta_data,
-  raw_user_meta_data,
-  is_super_admin,
-  created_at,
-  updated_at,
-  aud,
-  role
-) VALUES
-(
-  '00000000-0000-0000-0000-000000000001',
-  '00000000-0000-0000-0000-000000000000',
-  'owner@smartpos.com',
-  '$2a$10$tZptz5vj.g3mDR0LqP56x.9b7n9Uf63nC5rZ8QvS2s6Y8/0iH1U8y',
-  NOW(),
-  '{"provider": "email", "providers": ["email"]}',
-  '{"full_name": "Pak Budi (Owner)", "role": "owner"}',
-  false,
-  NOW(),
-  NOW(),
-  'authenticated',
-  'authenticated'
-),
-(
-  '00000000-0000-0000-0000-000000000002',
-  '00000000-0000-0000-0000-000000000000',
-  'cashier@smartpos.com',
-  '$2a$10$tZptz5vj.g3mDR0LqP56x.9b7n9Uf63nC5rZ8QvS2s6Y8/0iH1U8y',
-  NOW(),
-  '{"provider": "email", "providers": ["email"]}',
-  '{"full_name": "Siti (Cashier)", "role": "cashier"}',
-  false,
-  NOW(),
-  NOW(),
-  'authenticated',
-  'authenticated'
-),
-(
-  '00000000-0000-0000-0000-000000000003',
-  '00000000-0000-0000-0000-000000000000',
-  'gudang@smartpos.com',
-  '$2a$10$tZptz5vj.g3mDR0LqP56x.9b7n9Uf63nC5rZ8QvS2s6Y8/0iH1U8y',
-  NOW(),
-  '{"provider": "email", "providers": ["email"]}',
-  '{"full_name": "Anto (Gudang Staff)", "role": "staff_gudang"}',
-  false,
-  NOW(),
-  NOW(),
-  'authenticated',
-  'authenticated'
-);
+-- We wrap this in a PL/pgSQL block to catch permission/schema errors on live Supabase.
+DO $$
+BEGIN
+  BEGIN
+    DELETE FROM auth.users WHERE id IN (
+      '00000000-0000-0000-0000-000000000001',
+      '00000000-0000-0000-0000-000000000002',
+      '00000000-0000-0000-0000-000000000003'
+    );
 
--- Force updates to verify profiles synced correctly with their proper role
-UPDATE public.profiles SET role = 'owner' WHERE id = '00000000-0000-0000-0000-000000000001';
-UPDATE public.profiles SET role = 'cashier' WHERE id = '00000000-0000-0000-0000-000000000002';
-UPDATE public.profiles SET role = 'staff_gudang' WHERE id = '00000000-0000-0000-0000-000000000003';
+    -- Note: We include default empty string values for GoTrue columns to prevent "Database error querying schema"
+    INSERT INTO auth.users (
+      id,
+      instance_id,
+      email,
+      encrypted_password,
+      email_confirmed_at,
+      raw_app_meta_data,
+      raw_user_meta_data,
+      is_super_admin,
+      created_at,
+      updated_at,
+      aud,
+      role,
+      confirmation_token,
+      recovery_token,
+      email_change_token_new,
+      email_change,
+      phone_change_token,
+      is_sso_user,
+      is_anonymous
+    ) VALUES
+    (
+      '00000000-0000-0000-0000-000000000001',
+      '00000000-0000-0000-0000-000000000000',
+      'owner@smartpos.com',
+      '$2a$10$tZptz5vj.g3mDR0LqP56x.9b7n9Uf63nC5rZ8QvS2s6Y8/0iH1U8y',
+      NOW(),
+      '{"provider": "email", "providers": ["email"]}',
+      '{"full_name": "Pak Budi (Owner)", "role": "owner"}',
+      false,
+      NOW(),
+      NOW(),
+      'authenticated',
+      'authenticated',
+      '',
+      '',
+      '',
+      '',
+      '',
+      false,
+      false
+    ),
+    (
+      '00000000-0000-0000-0000-000000000002',
+      '00000000-0000-0000-0000-000000000000',
+      'cashier@smartpos.com',
+      '$2a$10$tZptz5vj.g3mDR0LqP56x.9b7n9Uf63nC5rZ8QvS2s6Y8/0iH1U8y',
+      NOW(),
+      '{"provider": "email", "providers": ["email"]}',
+      '{"full_name": "Siti (Cashier)", "role": "cashier"}',
+      false,
+      NOW(),
+      NOW(),
+      'authenticated',
+      'authenticated',
+      '',
+      '',
+      '',
+      '',
+      '',
+      false,
+      false
+    ),
+    (
+      '00000000-0000-0000-0000-000000000003',
+      '00000000-0000-0000-0000-000000000000',
+      'gudang@smartpos.com',
+      '$2a$10$tZptz5vj.g3mDR0LqP56x.9b7n9Uf63nC5rZ8QvS2s6Y8/0iH1U8y',
+      NOW(),
+      '{"provider": "email", "providers": ["email"]}',
+      '{"full_name": "Anto (Gudang Staff)", "role": "staff_gudang"}',
+      false,
+      NOW(),
+      NOW(),
+      'authenticated',
+      'authenticated',
+      '',
+      '',
+      '',
+      '',
+      '',
+      false,
+      false
+    );
+
+    -- Force updates to verify profiles synced correctly with their proper role
+    UPDATE public.profiles SET role = 'owner' WHERE id = '00000000-0000-0000-0000-000000000001';
+    UPDATE public.profiles SET role = 'cashier' WHERE id = '00000000-0000-0000-0000-000000000002';
+    UPDATE public.profiles SET role = 'staff_gudang' WHERE id = '00000000-0000-0000-0000-000000000003';
+  EXCEPTION
+    WHEN OTHERS THEN
+      RAISE NOTICE 'Could not seed auth.users automatically (expected on live Supabase due to restricted permissions). Please manually create user accounts in the Supabase Auth Dashboard UI.';
+  END;
+END $$;
+
 
 -- 2. Seed Categories
 INSERT INTO public.categories (id, name, description) VALUES
